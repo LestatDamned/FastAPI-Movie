@@ -25,7 +25,6 @@ async def get_movie():
 # asyncio.run(get_movie())
 
 
-
 async def api_movie():
     list_movie = []
     result_list = []

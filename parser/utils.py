@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.tables import Movie, Genre, Director, Writer, Actor, Country, Rating, Language
-from src.models import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
+from src.models.models import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
     RatingSchema, LanguageSchema
 
 

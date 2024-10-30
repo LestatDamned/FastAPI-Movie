@@ -5,11 +5,11 @@ from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from parser.parser import get_api_movie
+from parser.utils import get_movie_to_schema, save_movie_to_db
 from src.db.database import get_db
 from src.db.tables import Movie, Director, Actor, Genre, Writer, Country, Rating, Language
-from src.models import MovieSchema
-from src.utils import get_movie_to_schema, save_movie_to_db
-from parser.parser import get_api_movie
+from src.models.models import MovieSchema
 
 router = APIRouter()
 
@@ -29,43 +29,9 @@ async def fetch_movie(movie: str, year: int):
     return movie
 
 
-# @router.get("/fetch_movie/")
-# async def fetch_movie(movie: str, year: int):
-#     result = await get_api_movie(movie, year)
-#     genres = [GenreSchema(name=genre.strip()) for genre in result["Genre"].split(",")]
-#     directors = [DirectorSchema(name=director.strip()) for director in result["Director"].split(",")]
-#     writers = [WriterSchema(name=writer.strip()) for writer in result["Writer"].split(",")]
-#     actors = [ActorSchema(name=actor.strip()) for actor in result["Actors"].split(",")]
-#     country = [CountrySchema(name=country.strip()) for country in result["Country"].split(",")]
-#     rating = [RatingSchema(source=rating["Source"], value=rating["Value"]) for rating in result.get("Ratings", [])]
-#
-#     res = MovieSchema(
-#         Title=result["Title"],
-#         Year=result["Year"],
-#         Released=result["Released"],
-#         Runtime=result["Runtime"],
-#         Genre=genres,
-#         Director=directors,
-#         Writer=writers,
-#         Actors=actors,
-#         Plot=result["Plot"],
-#         Language=result["Language"],
-#         Country=country,
-#         Awards=result["Awards"],
-#         Poster=result["Poster"],
-#         Ratings=rating,
-#         Metascore=result["Metascore"],
-#         imdbRating=result["imdbRating"],
-#         imdbID=result["imdbID"],
-#         BoxOffice=result["BoxOffice"],
-#     )
-#     return result
-
-
 @router.get("/movie/{movie_id}")
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
     db_movie = await db.execute(select(Movie).where(Movie.id == movie_id))
-
     return db_movie
 
 
