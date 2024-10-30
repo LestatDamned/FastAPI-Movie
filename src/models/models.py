@@ -1,6 +1,6 @@
-from typing import List
-
 from pydantic import BaseModel
+
+from src.db.tables import Language
 
 
 class GenreSchema(BaseModel):
@@ -28,6 +28,10 @@ class RatingSchema(BaseModel):
     value: str
 
 
+class LanguageSchema(BaseModel):
+    name: str
+
+
 class MovieSchema(BaseModel):
     Title: str
     Year: int
@@ -38,7 +42,7 @@ class MovieSchema(BaseModel):
     Writer: list[WriterSchema]
     Actors: list[ActorSchema]
     Plot: str
-    Language: str
+    Language: list[LanguageSchema]
     Country: list[CountrySchema]
     Awards: str
     Poster: str

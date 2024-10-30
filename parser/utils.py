@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.models import Movie, Genre, Director, Writer, Actor, Country, Rating
-from app.schemans import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
-    RatingSchema
+from src.db.tables import Movie, Genre, Director, Writer, Actor, Country, Rating, Language
+from src.models import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
+    RatingSchema, LanguageSchema
 
 
 async def save_movie_to_db(movie_data: MovieSchema, db: AsyncSession):
@@ -25,13 +25,21 @@ async def save_movie_to_db(movie_data: MovieSchema, db: AsyncSession):
     actor = [Actor(name=actor.name) for actor in movie_data.Actors]
     country = [Country(name=country.name) for country in movie_data.Country]
     rating = [Rating(source=rating.source, value=rating.value) for rating in movie_data.Ratings]
+    language = [Language(name=language.name) for language in movie_data.Language]
 
-    movie.genres.extend(genres)
-    movie.director.extend(director)
-    movie.writer.extend(writer)
-    movie.actors.extend(actor)
-    movie.country.extend(country)
-    movie.ratings.extend(rating)
+    # movie.genres.extend(genres)
+    # movie.director.extend(director)
+    # movie.writer.extend(writer)
+    # movie.actors.extend(actor)
+    # movie.country.extend(country)
+    # movie.ratings.extend(rating)
+    movie.genres = genres
+    movie.director = director
+    movie.writer = writer
+    movie.actors = actor
+    movie.country = country
+    movie.ratings = rating
+    movie.language = language
 
     db.add(movie)
     await db.commit()
@@ -46,6 +54,7 @@ def get_movie_to_schema(result: dict) -> MovieSchema:
     actors = [ActorSchema(name=actor.strip()) for actor in result["Actors"].split(",")]
     country = [CountrySchema(name=country.strip()) for country in result["Country"].split(",")]
     rating = [RatingSchema(source=rating["Source"], value=rating["Value"]) for rating in result.get("Ratings", [])]
+    language = [LanguageSchema(name=language.strip()) for language in result["Language"].split(",")]
 
     movie = MovieSchema(
         Title=result["Title"],
@@ -57,7 +66,7 @@ def get_movie_to_schema(result: dict) -> MovieSchema:
         Writer=writers,
         Actors=actors,
         Plot=result["Plot"],
-        Language=result["Language"],
+        Language=language,
         Country=country,
         Awards=result["Awards"],
         Poster=result["Poster"],
