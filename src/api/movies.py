@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 
 from parser.parser import get_api_movie
 from parser.utils import get_movie_to_schema, save_movie_to_db
@@ -29,9 +30,26 @@ async def fetch_movie(movie: str, year: int):
     return movie
 
 
+@router.get("/movie/{movie_id}/detail/")
+async def get_movie_detail(movie_id: int, db: AsyncSession = Depends(get_db)):
+    query = (select(Movie).options(
+        joinedload(Movie.actors),
+        joinedload(Movie.director),
+        joinedload(Movie.language),
+        joinedload(Movie.genres),
+        joinedload(Movie.writer),
+        joinedload(Movie.country),
+        joinedload(Movie.ratings)).filter_by(id=movie_id))
+    db_movie = await db.execute(query)
+    db_movie = db_movie.scalar()
+    return db_movie
+
+
 @router.get("/movie/{movie_id}")
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
-    db_movie = await db.execute(select(Movie).where(Movie.id == movie_id))
+    query = (select(Movie).filter_by(id=movie_id))
+    db_movie = await db.execute(query)
+    db_movie = db_movie.scalar()
     return db_movie
 
 
@@ -47,6 +65,14 @@ async def get_movie(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Director))
     director = result.scalars().all()
     return director
+
+
+@router.get("/directors/{director_id}")
+async def get_movie(director_id: int, db: AsyncSession = Depends(get_db)):
+    query = (select(Director).filter_by(id=director_id))
+    db_movie = await db.execute(query)
+    db_movie = db_movie.scalar()
+    return db_movie
 
 
 @router.get("/actors/")

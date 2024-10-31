@@ -36,7 +36,8 @@ movie_languages_m2m = Table(
     Column("language_id", Integer, ForeignKey("languages.id"), primary_key=True)
 )
 
-
+# TODO констрейны узнать что такое, м2м чтобы ссылался подругому, составной PK, проработать с ключами
+#  нейминг столбцов, поправить,
 class Movie(Base):
     __tablename__ = 'movies'
 
