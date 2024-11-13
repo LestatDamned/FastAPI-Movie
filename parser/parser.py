@@ -1,8 +1,13 @@
+import asyncio
 import json
-from urllib.parse import urlencode
+from pprint import pprint
+from urllib.parse import urlencode, quote
 
+import aiofiles
 import httpx
 from bs4 import BeautifulSoup
+
+from src.core.config import settings
 
 
 async def get_movie():
@@ -28,17 +33,20 @@ async def get_movie():
 async def api_movie():
     list_movie = []
     result_list = []
-    with open("movie.txt", mode='r', encoding='utf-8') as f:
-        for line in f:
+
+    async with aiofiles.open("movie.txt", mode='r', encoding='utf-8') as f:
+        async for line in f:
             title = urlencode({"t": line})
             list_movie.append(title)
+
     async with httpx.AsyncClient() as client:
         for movie in list_movie:
-            url = f"https://www.omdbapi.com/?i=tt3896198&apikey=16fe9e89&{movie}&y=2023&plot=full"
+            url = f"https://www.omdbapi.com/?i=tt3896198&apikey={settings.movie_api}&{movie}&y=2023&plot=full"
             response = await client.get(url)
             result_list.append(response.json())
-    with open("result_movie.json", "w", encoding='utf-8') as f:
-        json.dump(result_list, f, ensure_ascii=False, indent=4)
+
+    async with aiofiles.open("result_movie.json", "w", encoding='utf-8') as f:
+        await f.write(json.dumps(result_list, ensure_ascii=False, indent=4))
     print(result_list)
 
 
@@ -46,6 +54,37 @@ async def api_movie():
 async def get_api_movie(line, year=2023):
     title = urlencode({"t": line})
     async with httpx.AsyncClient() as client:
-        url = f"https://www.omdbapi.com/?i=tt3896198&apikey=16fe9e89&{title}&y={year}&plot=full"
+        url = f"https://www.omdbapi.com/?i=tt3896198&apikey={settings.movie_api}&{title}&y={year}&plot=full"
         response = await client.get(url)
     return response.json()
+
+
+async def search_actor_id(name=None):
+    async with httpx.AsyncClient() as client:
+        name = quote(name)
+        url = f"https://api.themoviedb.org/3/search/person?query={name}&include_adult=false&language=en-US&page=1"
+        headers = {
+            "accept": "application/json",
+            "Authorization": settings.actor_api
+        }
+        response = await client.get(url, headers=headers)
+        response = response.json()
+        return response["results"][0]["id"]
+
+
+async def get_detail_actor_from_api(name):
+    actor_id = await search_actor_id(name)
+    print(actor_id)
+    async with httpx.AsyncClient() as client:
+        url = f"https://api.themoviedb.org/3/person/{actor_id}?language=en-US"
+        headers = {
+            "accept": "application/json",
+            "Authorization": settings.actor_api
+        }
+        response = await client.get(url, headers=headers)
+        response = response.json()
+        pprint(response)
+        return response
+
+
+# asyncio.run(get_detail_actor_from_api("Benny Safdie"))

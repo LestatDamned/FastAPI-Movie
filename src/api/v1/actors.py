@@ -1,35 +1,37 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.database import get_db
 from src.db.tables import Actor
+from src.models.models import ActorSchema
 
 router = APIRouter()
 
 
 @router.get("/actors/")
-async def get_actor(db: AsyncSession = Depends(get_db)):
+async def get_actor(db: AsyncSession = Depends(get_db))-> list[ActorSchema]:
     result = await db.execute(select(Actor))
     actors = result.scalars().all()
-    return actors
+    return [ActorSchema.model_validate(actor, from_attributes=True) for actor in actors]
 
 
 @router.get("/actors/{actor_id}/")
-async def get_actor(actor_id: int, db: AsyncSession = Depends(get_db)):
+async def get_actor(actor_id: int, db: AsyncSession = Depends(get_db)) -> ActorSchema:
     result = await db.execute(select(Actor).filter_by(id=actor_id))
     actors = result.scalar_one_or_none()
     if actors is None:
-        return {"message": "No actors"}
-    return actors
+        raise HTTPException(status_code=404, detail="Actor not found")
+    return ActorSchema.model_validate(actors, from_attributes=True)
 
 
 @router.patch("/actors/{actor_id}/")
-async def update_actor(actor_id: int, new_name: str, db: AsyncSession = Depends(get_db)):
+async def update_actor(actor_id: int, new_name: str, db: AsyncSession = Depends(get_db)) -> ActorSchema:
     result = await db.execute(select(Actor).filter_by(id=actor_id))
     actor = result.scalar_one_or_none()
     if actor is None:
-        return {"message": "No actors"}
+        raise HTTPException(status_code=404, detail="Actor not found")
 
     query = update(Actor).filter_by(id=actor_id).values(name=new_name)
     await db.execute(query)
@@ -37,4 +39,4 @@ async def update_actor(actor_id: int, new_name: str, db: AsyncSession = Depends(
 
     updated_actor = await db.execute(select(Actor).filter_by(id=actor_id))
     updated_actor = updated_actor.scalar()
-    return updated_actor
+    return ActorSchema.model_validate(updated_actor, from_attributes=True)

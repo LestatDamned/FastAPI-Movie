@@ -2,10 +2,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.tables import Movie, Genre, Director, Writer, Actor, Country, Rating, Language
 from src.models.models import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
-    RatingSchema, LanguageSchema
+    RatingSchema, LanguageSchema, MovieSchemaWrite
 
 
-async def save_movie_to_db(movie_data: MovieSchema, db: AsyncSession):
+async def save_movie_to_db(movie_data: MovieSchemaWrite, db: AsyncSession):
     movie = Movie(
         title=movie_data.Title,
         year=movie_data.Year,
@@ -41,7 +41,7 @@ async def save_movie_to_db(movie_data: MovieSchema, db: AsyncSession):
     return movie
 
 
-def get_movie_to_schema(result: dict) -> MovieSchema:
+def get_movie_to_schema(result: dict) -> MovieSchemaWrite:
     genres = [GenreSchema(name=genre.strip()) for genre in result["Genre"].split(",")]
     directors = [DirectorSchema(name=director.strip()) for director in result["Director"].split(",")]
     writers = [WriterSchema(name=writer.strip()) for writer in result["Writer"].split(",")]
@@ -50,7 +50,7 @@ def get_movie_to_schema(result: dict) -> MovieSchema:
     rating = [RatingSchema(source=rating["Source"], value=rating["Value"]) for rating in result.get("Ratings", [])]
     language = [LanguageSchema(name=language.strip()) for language in result["Language"].split(",")]
 
-    movie = MovieSchema(
+    movie = MovieSchemaWrite(
         Title=result["Title"],
         Year=result["Year"],
         Released=result["Released"],
