@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey, Table
+from datetime import date
+
+from sqlalchemy import Column, Integer, ForeignKey, Table, JSON, Date, String
 from sqlalchemy.orm import relationship, declarative_base, Mapped, mapped_column
 
 Base = declarative_base()
@@ -35,6 +37,7 @@ movie_languages_m2m = Table(
     Column("movie_id", Integer, ForeignKey("movies.id"), primary_key=True),
     Column("language_id", Integer, ForeignKey("languages.id"), primary_key=True)
 )
+
 
 # TODO констрейны узнать что такое, м2м чтобы ссылался подругому, составной PK, проработать с ключами
 #  нейминг столбцов, поправить,
@@ -114,6 +117,11 @@ class Actor(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    bio: Mapped[str | None] = mapped_column(String, nullable=True)
+    place_of_birth: Mapped[str | None] = mapped_column(String, nullable=True)
+    gender: Mapped[str | None] = mapped_column(String, nullable=True)
+    birthdate: Mapped[date | None] = mapped_column(Date, nullable=True)
+    homepage: Mapped[str | None] = mapped_column(String, nullable=True)
 
     movies: Mapped[list["Movie"]] = relationship("Movie",
                                                  secondary=movie_actors_m2m,

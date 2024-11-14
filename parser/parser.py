@@ -59,7 +59,7 @@ async def get_api_movie(line, year=2023):
     return response.json()
 
 
-async def search_actor_id(name=None):
+async def search_actor_id(name: str = None):
     async with httpx.AsyncClient() as client:
         name = quote(name)
         url = f"https://api.themoviedb.org/3/search/person?query={name}&include_adult=false&language=en-US&page=1"
@@ -69,12 +69,13 @@ async def search_actor_id(name=None):
         }
         response = await client.get(url, headers=headers)
         response = response.json()
+        if response["total_results"] == 0:
+            raise ValueError("Actor not found")
         return response["results"][0]["id"]
 
 
-async def get_detail_actor_from_api(name):
+async def get_detail_actor_from_api(name: str):
     actor_id = await search_actor_id(name)
-    print(actor_id)
     async with httpx.AsyncClient() as client:
         url = f"https://api.themoviedb.org/3/person/{actor_id}?language=en-US"
         headers = {
@@ -87,4 +88,17 @@ async def get_detail_actor_from_api(name):
         return response
 
 
-# asyncio.run(get_detail_actor_from_api("Benny Safdie"))
+# asyncio.run(get_detail_actor_from_api(""))
+
+
+async def bulk_films():
+    file_path = '/home/max-cooper/PycharmProjects/FastAPI-Movies/parser/movie.txt'
+    title = []
+    async with aiofiles.open(file_path, mode='r', encoding='utf-8') as f:
+        async for line in f:
+            title.append(line)
+    print(len(title))
+    return title
+
+
+# asyncio.run(bulk_films())

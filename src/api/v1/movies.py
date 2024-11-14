@@ -1,3 +1,4 @@
+import asyncio
 from select import select
 
 from fastapi import APIRouter, HTTPException
@@ -5,9 +6,9 @@ from fastapi.params import Depends
 from sqlalchemy import update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, Session
 
-from parser.parser import get_api_movie
+from parser.parser import get_api_movie, bulk_films
 from parser.utils import get_movie_to_schema, save_movie_to_db
 from src.db.database import get_db
 from src.db.tables import Movie
@@ -15,6 +16,17 @@ from src.models.models import MovieSchema, MovieSchemaWrite
 
 router = APIRouter()
 
+
+@router.get("/eat_movies/")
+async def eat_movies(db: AsyncSession = Depends(get_db)):
+    movies_list = await bulk_films()
+
+    json_list = [await get_api_movie(movie, 2023) for movie in movies_list]
+
+    movie_data = [get_movie_to_schema(movie) for movie in json_list]
+
+    movies_data = [await save_movie_to_db(movie, db) for movie in movie_data]
+    return movies_data
 
 @router.get("/save_movie_to_db/")
 async def save_movie_to_database(movie: str, year: int, db: AsyncSession = Depends(get_db)):

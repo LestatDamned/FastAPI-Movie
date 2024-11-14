@@ -1,8 +1,26 @@
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.tables import Movie, Genre, Director, Writer, Actor, Country, Rating, Language
-from src.models.models import MovieSchema, GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
-    RatingSchema, LanguageSchema, MovieSchemaWrite
+from parser.parser import get_detail_actor_from_api
+from src.db.tables import Movie, Genre, Director, Writer, Country, Rating, Language, Actor, Base
+from src.models.models import GenreSchema, DirectorSchema, WriterSchema, ActorSchema, CountrySchema, \
+    RatingSchema, LanguageSchema, MovieSchemaWrite, ActorDetailSchema
+
+
+async def populate_fields(db: AsyncSession, movie_data: list[BaseModel], db_instance: type[Base]):
+    data_list = []
+    for data in movie_data:
+        existing_data = await db.execute(select(db_instance).filter_by(name=data.name))
+        existing_data = existing_data.scalar_one_or_none()
+        if existing_data is None:
+            new_data = db_instance(name=data.name)
+            db.add(new_data)
+            await db.commit()
+            data_list.append(new_data)
+        else:
+            data_list.append(existing_data)
+    return data_list
 
 
 async def save_movie_to_db(movie_data: MovieSchemaWrite, db: AsyncSession):
@@ -19,22 +37,33 @@ async def save_movie_to_db(movie_data: MovieSchemaWrite, db: AsyncSession):
         imdb_id=movie_data.imdbID,
         box_office=movie_data.BoxOffice,
     )
-    genres = [Genre(name=genre.name) for genre in movie_data.Genre]
-    director = [Director(name=director.name) for director in movie_data.Director]
-    writer = [Writer(name=writer.name) for writer in movie_data.Writer]
-    actor = [Actor(name=actor.name) for actor in movie_data.Actors]
-    country = [Country(name=country.name) for country in movie_data.Country]
-    rating = [Rating(source=rating.source, value=rating.value) for rating in movie_data.Ratings]
-    language = [Language(name=language.name) for language in movie_data.Language]
+
+    genres = await populate_fields(db, movie_data.Genre, Genre)
+    directors = await populate_fields(db, movie_data.Director, Director)
+    writers = await populate_fields(db, movie_data.Writer, Writer)
+    countries = await populate_fields(db, movie_data.Country, Country)
+    languages = await populate_fields(db, movie_data.Language, Language)
+    ratings = [Rating(source=rating.source, value=rating.value) for rating in movie_data.Ratings]
+
+    actors_list = []
+    for actor in movie_data.Actors:
+        existing_actor = await db.execute(select(Actor).filter_by(name=actor.name))
+        existing_actor = existing_actor.scalar_one_or_none()
+        if existing_actor is None:
+            new_actor = await get_detail_actor_from_api(actor.name)
+            new_actor = ActorDetailSchema.model_validate(new_actor, from_attributes=True)
+            new_actor = new_actor.model_dump()
+            actors_list.append(Actor(**new_actor))
+        else:
+            actors_list.append(existing_actor)
 
     movie.genres = genres
-    movie.director = director
-    movie.writer = writer
-    movie.actors = actor
-    movie.country = country
-    movie.ratings = rating
-    movie.language = language
-
+    movie.director = directors
+    movie.writer = writers
+    movie.actors = actors_list
+    movie.country = countries
+    movie.ratings = ratings
+    movie.language = languages
     db.add(movie)
     await db.commit()
     await db.refresh(movie)
