@@ -1,4 +1,3 @@
-import asyncio
 from select import select
 
 from fastapi import APIRouter, HTTPException
@@ -6,13 +5,13 @@ from fastapi.params import Depends
 from sqlalchemy import update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload, Session
+from sqlalchemy.orm import joinedload
 
 from parser.parser import get_api_movie, bulk_films
 from parser.utils import get_movie_to_schema, save_movie_to_db
 from src.db.database import get_db
 from src.db.tables import Movie
-from src.models.models import MovieSchema, MovieSchemaWrite
+from src.models.models import MovieCreateSchema, MovieReadSchema, MoviePutSchema
 
 router = APIRouter()
 
@@ -28,6 +27,7 @@ async def eat_movies(db: AsyncSession = Depends(get_db)):
     movies_data = [await save_movie_to_db(movie, db) for movie in movie_data]
     return movies_data
 
+
 @router.get("/save_movie_to_db/")
 async def save_movie_to_database(movie: str, year: int, db: AsyncSession = Depends(get_db)):
     result = await get_api_movie(movie, year)
@@ -37,14 +37,31 @@ async def save_movie_to_database(movie: str, year: int, db: AsyncSession = Depen
 
 
 @router.get("/fetch_movie/")
-async def fetch_movie(movie: str, year: int) -> MovieSchemaWrite:
+async def fetch_movie(movie: str, year: int) -> MovieCreateSchema:
     result = await get_api_movie(movie, year)
     movie = get_movie_to_schema(result)
     return movie
 
 
-@router.get("/movie/{movie_id}/detail/")
-async def get_movie_detail(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieSchema:
+@router.get("/movie/{movie_id}")
+async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
+    query = (select(Movie).filter_by(id=movie_id).options(
+        joinedload(Movie.actors),
+        joinedload(Movie.director),
+        joinedload(Movie.language),
+        joinedload(Movie.genres),
+        joinedload(Movie.writer),
+        joinedload(Movie.country),
+        joinedload(Movie.ratings)))
+    result = await db.execute(query)
+    movie = result.unique().scalar_one_or_none()
+    if movie is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    return MovieReadSchema.model_validate(movie, from_attributes=True)
+
+
+@router.get("/movies/")
+async def get_movie(db: AsyncSession = Depends(get_db)):
     query = (select(Movie).options(
         joinedload(Movie.actors),
         joinedload(Movie.director),
@@ -52,42 +69,26 @@ async def get_movie_detail(movie_id: int, db: AsyncSession = Depends(get_db)) ->
         joinedload(Movie.genres),
         joinedload(Movie.writer),
         joinedload(Movie.country),
-        joinedload(Movie.ratings)).filter_by(id=movie_id))
-    db_movie = await db.execute(query)
-    db_movie = db_movie.scalar()
-    return MovieSchema.model_validate(db_movie, from_attributes=True)
-
-
-@router.get("/movie/{movie_id}")
-async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
-    query = (select(Movie).filter_by(id=movie_id))
+        joinedload(Movie.ratings)))
     result = await db.execute(query)
-    movie = result.scalar_one_or_none()
-    if movie is None:
-        HTTPException(status_code=404, detail="Movie not found")
-    return movie
+    movies = result.unique().scalars().all()
+    return [MovieReadSchema.model_validate(movie, from_attributes=True) for movie in movies]
 
 
-@router.get("/movies/")
-async def get_movie(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Movie))
-    movies = result.scalars().all()
-    return movies
-
-
-@router.patch("/movie/{movie_id}")
-async def update_movie(movie_id: int, new_name: str, db: AsyncSession = Depends(get_db)):
+@router.put("/movie/{movie_id}")
+async def update_movie(movie_id: int, new_data: MoviePutSchema,
+                       db: AsyncSession = Depends(get_db)) -> MoviePutSchema:
     result = await db.execute(select(Movie).filter_by(id=movie_id))
     movie = result.scalar_one_or_none()
     if movie is None:
-        HTTPException(status_code=404, detail="Movie not found")
-    query = update(Movie).filter_by(id=movie_id).values(title=new_name)
+        raise HTTPException(status_code=404, detail="Movie not found")
+    query = update(Movie).filter_by(id=movie_id).values(**new_data.model_dump(exclude_unset=True))
     await db.execute(query)
     await db.commit()
 
     updated_movie = await db.execute(select(Movie).filter_by(id=movie_id))
     updated_movie = updated_movie.scalar()
-    return updated_movie
+    return MoviePutSchema.model_validate(updated_movie, from_attributes=True)
 
 
 @router.delete("/movie/{movie_id}")
