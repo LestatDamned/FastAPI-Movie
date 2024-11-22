@@ -1,4 +1,3 @@
-import asyncio
 import json
 from pprint import pprint
 from urllib.parse import urlencode, quote
@@ -99,6 +98,5 @@ async def bulk_films():
             title.append(line)
     print(len(title))
     return title
-
 
 # asyncio.run(bulk_films())

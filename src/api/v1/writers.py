@@ -9,14 +9,14 @@ from src.models.models import WriterReadSchema, WriterCreateSchema
 router = APIRouter()
 
 
-@router.get("/writers/")
+@router.get("/")
 async def get_writer(db: AsyncSession = Depends(get_db)) -> list[WriterReadSchema]:
     result = await db.execute(select(Writer))
     writers = result.scalars().all()
     return [WriterReadSchema.model_validate(writer, from_attributes=True) for writer in writers]
 
 
-@router.get("/writers/{writer_id}/")
+@router.get("/{writer_id}/")
 async def get_writer(writer_id: int, db: AsyncSession = Depends(get_db)) -> WriterReadSchema:
     result = await db.execute(select(Writer).filter_by(id=writer_id))
     writers = result.scalar_one_or_none()
@@ -25,7 +25,7 @@ async def get_writer(writer_id: int, db: AsyncSession = Depends(get_db)) -> Writ
     return WriterReadSchema.model_validate(writers, from_attributes=True)
 
 
-@router.put("/writers/{writer_id}/")
+@router.put("/{writer_id}/")
 async def update_writer(writer_id: int, new_data: WriterCreateSchema,
                         db: AsyncSession = Depends(get_db)) -> WriterReadSchema:
     result = await db.execute(select(Writer).filter_by(id=writer_id))
