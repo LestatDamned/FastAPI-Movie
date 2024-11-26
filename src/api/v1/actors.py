@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dao.base import ActorDAO
 from src.db.database import get_db
-from src.models.models import ActorReadSchema, MovieReadSchema, ActorCreateSchema
+from src.models.actors import ActorCreateSchema, ActorReadSchema
+from src.models.movies import MovieReadSchema
 
 router = APIRouter()
 
@@ -27,7 +28,13 @@ async def update_actor(actor_id: int, new_data: ActorCreateSchema,
     return ActorReadSchema.model_validate(updated_actor, from_attributes=True)
 
 
-@router.post("/movies/{actor_name}/")
+@router.get("/movies/detail/{actor_name}/")
 async def get_movie_with_actor(actor_name: str, db: AsyncSession = Depends(get_db)) -> list[MovieReadSchema]:
     movies = await ActorDAO.get_movie_with_actor(actor_name, db)
     return [MovieReadSchema.model_validate(movie, from_attributes=True) for movie in movies]
+
+
+@router.get("/movies/{name}/")
+async def get_name(name: str, db: AsyncSession = Depends(get_db)):
+    actors = await ActorDAO.get_with_movies(name, db)
+    return actors

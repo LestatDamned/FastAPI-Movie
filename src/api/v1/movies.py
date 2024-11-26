@@ -1,21 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.params import Depends
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
 
 from parser.parser import get_api_movie, bulk_films
 from parser.utils import get_movie_to_schema, save_movie_to_db
-from src.dao.base import MovieDAO, RBJoinedMovie
+from src.dao.base import MovieDAO
 from src.db.database import get_db
 from src.db.tables import Movie
-from src.models.models import MovieCreateSchema, MovieReadSchema, MoviePutSchema
+from src.models.movies import MovieCreateSchema, MovieReadSchema, MoviePutSchema
 
 router = APIRouter()
 
 
-@router.get("/eat_movies/")
+@router.post("/eat_movies/")
 async def eat_movies(db: AsyncSession = Depends(get_db)):
     movies_list = await bulk_films()
 
@@ -27,7 +26,7 @@ async def eat_movies(db: AsyncSession = Depends(get_db)):
     return movies_data
 
 
-@router.get("/save_movie_to_db/")
+@router.post("/save_movie_to_db/")
 async def save_movie_to_database(movie: str, year: int, db: AsyncSession = Depends(get_db)):
     result = await get_api_movie(movie, year)
     movie_data = get_movie_to_schema(result)
@@ -50,7 +49,7 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieR
 
 @router.get("/")
 async def get_movie(db: AsyncSession = Depends(get_db)) -> list[MovieReadSchema]:
-    movies = await MovieDAO.get_joined_movies(db)
+    movies = await MovieDAO.get_all_joined_movies(db)
     return [MovieReadSchema.model_validate(movie, from_attributes=True) for movie in movies]
 
 
@@ -63,11 +62,5 @@ async def update_movie(movie_id: int, new_data: MoviePutSchema,
 
 @router.delete("/{movie_id}")
 async def delete_movie(movie_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Movie).filter_by(id=movie_id))
-    movie = result.scalar_one_or_none()
-    if movie is None:
-        return {"Message": "Movie not found."}
-    query = delete(Movie).filter_by(id=movie_id)
-    del_result = await db.execute(query)
-    await db.commit()
-    return {"Message": f"Movie deleted {del_result.rowcount}, id {movie_id}"}
+    result = await MovieDAO.delete(movie_id, db)
+    return {"Message": f"Movie deleted {result}, id {movie_id}"}

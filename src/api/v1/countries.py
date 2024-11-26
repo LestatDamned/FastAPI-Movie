@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dao.base import CountriesDAO
 from src.db.database import get_db
-from src.models.models import CountryReadSchema, CountryCreateSchema
+from src.models.countries import CountryReadSchema, CountryCreateSchema
 
 router = APIRouter()
 
@@ -25,3 +25,9 @@ async def update_country(country_id: int, new_data: CountryCreateSchema,
                          db: AsyncSession = Depends(get_db)) -> CountryReadSchema:
     updated_country = await CountriesDAO.update(country_id, new_data, db)
     return CountryReadSchema.model_validate(updated_country, from_attributes=True)
+
+
+@router.get("/movies/{name}")
+async def get_by_name(name: str, db: AsyncSession = Depends(get_db)):
+    countries = await CountriesDAO.get_with_movies(name, db)
+    return countries

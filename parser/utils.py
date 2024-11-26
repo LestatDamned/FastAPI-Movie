@@ -4,8 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from parser.parser import get_detail_actor_from_api
 from src.db.tables import Movie, Genre, Director, Writer, Country, Rating, Language, Actor, Base
-from src.models.models import GenreReadSchema, DirectorReadSchema, WriterReadSchema, ActorSchema, CountryReadSchema, \
-    RatingReadSchema, LanguageReadSchema, ActorCreateSchema, MovieCreateSchema
+from src.models.actors import ActorSchema, ActorCreateSchema
+from src.models.countries import CountryReadSchema
+from src.models.directors import DirectorReadSchema
+from src.models.genres import GenreReadSchema
+from src.models.languages import LanguageReadSchema
+from src.models.movies import MovieCreateSchema
+from src.models.ratings import RatingReadSchema
+from src.models.writers import WriterReadSchema
 
 
 async def populate_fields(db: AsyncSession, movie_data: list[BaseModel], db_instance: type[Base]):

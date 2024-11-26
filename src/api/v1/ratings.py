@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dao.base import RatingsDAO
 from src.db.database import get_db
-from src.models.models import RatingReadSchema, RatingCreateSchema
+from src.models.ratings import RatingReadSchema, RatingCreateSchema
 
 router = APIRouter()
 
