@@ -7,6 +7,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from src.core.config import settings
+from src.models.models import LoadMovieFromAPI
 
 
 async def get_movie():
@@ -50,10 +51,10 @@ async def api_movie():
 
 
 # asyncio.run(api_movie())
-async def get_api_movie(line, year=2023):
-    title = urlencode({"t": line})
+async def get_api_movie(movie: LoadMovieFromAPI):
+    title = urlencode({"t": movie.name})
     async with httpx.AsyncClient() as client:
-        url = f"https://www.omdbapi.com/?i=tt3896198&apikey={settings.movie_api}&{title}&y={year}&plot=full"
+        url = f"https://www.omdbapi.com/?i=tt3896198&apikey={settings.movie_api}&{title}&y={movie.year}&plot=full"
         response = await client.get(url)
     return response.json()
 
